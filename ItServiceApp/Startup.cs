@@ -52,7 +52,7 @@ namespace ItServiceApp
 
             services.ConfigureApplicationCookie(options =>
             {
-                //Cookie Settings
+                //Cookie Settings 
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
 
                 options.LoginPath = "/Account/Login";
