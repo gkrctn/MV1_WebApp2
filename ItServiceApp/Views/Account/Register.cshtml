@@ -3,19 +3,10 @@
     ViewBag.Title = "Kayıt ol";
 }
 
+
+
 <!--====== Page Title start ======-->
-<section class="page-title-area">
-    <div class="container">
-        <h2 class="title">Checkout</h2>
-        <ul class="breadcrumb-nav">
-            <li><a asp-controller="Home" asp-action="Index"> Ana Sayfa </a></li>
-
-
-
-            <li class="active">@ViewBag.Title</li>
-        </ul>
-    </div>
-</section>
+<partial name="Partials/_PageTitlePartial" />
 <!--====== Page Title End ======-->
 <!--====== Shoping Checkout Start  ======-->
 <section class="shoping-checkout-area section-gap">
@@ -83,19 +74,19 @@
                             </div>
                         </div>
                     </div>
-                </div>         
+                </div>
             </div>
         </form>
     </div>
 </section>
 <!--====== Shoping Checkout End ======-->
 @section Styles
-{ 
-<style>
-    input{
-        border:solid 1px #e3eeff;
-        height: 50px;
-        padding: 0 15px;
-    }
-</style>
+{
+    <style>
+        input {
+            border: solid 1px #e3eeff;
+            height: 50px;
+            padding: 0 15px;
+        }
+    </style>
 }
