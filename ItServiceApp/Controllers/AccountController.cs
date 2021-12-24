@@ -1,4 +1,5 @@
-﻿using ItServiceApp.Models.Identity;
+﻿using ItServiceApp.Models;
+using ItServiceApp.Models.Identity;
 using ItServiceApp.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -14,11 +15,29 @@ namespace ItServiceApp.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+        private readonly RoleManager<ApplicationRole> _roleManager;
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager,RoleManager<ApplicationRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
+            CheckRoles();
         }
+
+        private void CheckRoles()
+        {
+            foreach (var roleName in RoleModels.Roles)
+            {
+                if (!_roleManager.RoleExistsAsync(roleName).Result)
+                {
+                    var result = _roleManager.CreateAsync(new ApplicationRole()
+                    {
+                        Name = roleName
+                    }).Result;
+                }
+            }
+        }
+
         public IActionResult Register()
         {
             return View();
@@ -51,10 +70,12 @@ namespace ItServiceApp.Controllers
             var result = await _userManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
             {
+                var count = _userManager.Users.Count();
+               result =  await _userManager.AddToRoleAsync(user, count == 1 ? RoleModels.Admin : RoleModels.User);
                 //kullanıcıya rol atama
                 //email onay maili
                 //login sayfasına yönlendirme
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Login", "Account");
             }
             else
             {
