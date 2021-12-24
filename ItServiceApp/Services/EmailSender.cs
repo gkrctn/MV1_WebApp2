@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Mail;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ItServiceApp.Services
@@ -21,7 +23,7 @@ namespace ItServiceApp.Services
         public int SmtpPort => Convert.ToInt32(_configuration.GetSection("EmailOptions:SmtpPort").Value);
         public async Task SendAsync (EmailMessage message)
         {
-            var mail = new MailMessage { from = new MailAddress(this.SenderMail) };
+            var mail = new MailMessage { From = new MailAddress(this.SenderMail) };
             foreach (var c in message.Contacts)
             {
                 mail.To.Add(c);
@@ -45,24 +47,21 @@ namespace ItServiceApp.Services
 
             mail.IsBodyHtml = true;
             mail.BodyEncoding = System.Text.Encoding.UTF8;
-            mail.SubjectEncoding = System
+            mail.SubjectEncoding = Encoding.UTF8;
+            mail.HeadersEncoding = Encoding.UTF8;
 
-
-
-
-
-
+            var smptClient = new SmtpClient(this.Smtp, this.SmtpPort)
+            {
+                Credentials = new NetworkCredential(this.SenderMail, this.Password),
+                EnableSsl = true
+            };
+            await smptClient.SendMailAsync(mail);
         }
-
-
-
-
-
-
 
         public Task SendAsync(EmailSender message)
         {
-            
+            throw new NotImplementedException();
         }
     }
+  
 }
