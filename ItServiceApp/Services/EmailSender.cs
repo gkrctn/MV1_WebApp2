@@ -58,10 +58,7 @@ namespace ItServiceApp.Services
             await smptClient.SendMailAsync(mail);
         }
 
-        public Task SendAsync(EmailSender message)
-        {
-            throw new NotImplementedException();
-        }
+     
     }
   
 }
