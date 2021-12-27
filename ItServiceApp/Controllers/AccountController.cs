@@ -1,4 +1,5 @@
-﻿using ItServiceApp.Models;
+﻿using ItServiceApp.Extensions;
+using ItServiceApp.Models;
 using ItServiceApp.Models.Identity;
 using ItServiceApp.Services;
 using ItServiceApp.ViewModels;
@@ -21,9 +22,9 @@ namespace ItServiceApp.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IEmailSender _emailSender;
-        public AccountController(UserManager<ApplicationUser> userManager, 
+        public AccountController(UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            RoleManager<ApplicationRole> roleManager, 
+            RoleManager<ApplicationRole> roleManager,
             IEmailSender emailSender)
         {
             _userManager = userManager;
@@ -59,13 +60,13 @@ namespace ItServiceApp.Controllers
                 return View(model);
             }
             var user = await _userManager.FindByNameAsync(model.UserName);
-            if (user!=null)
+            if (user != null)
             {
                 ModelState.AddModelError(nameof(model.UserName), "Bu kullanıcı adı daha önce kayıt edilmiştir.");
                 return View(model);
             }
             user = await _userManager.FindByEmailAsync(model.Email);
-            if (user!=null)
+            if (user != null)
             {
                 ModelState.AddModelError(nameof(model.Email), "Bu email adresi daha önce kayıt edilmiştir.");
             }
@@ -80,7 +81,7 @@ namespace ItServiceApp.Controllers
             if (result.Succeeded)
             {
                 var count = _userManager.Users.Count();
-               result =  await _userManager.AddToRoleAsync(user, count == 1 ? RoleModels.Admin : RoleModels.Passive);
+                result = await _userManager.AddToRoleAsync(user, count == 1 ? RoleModels.Admin : RoleModels.Passive);
                 //kullanıcıya rol atama
                 //email onay maili
                 //login sayfasına yönlendirme
@@ -110,9 +111,9 @@ namespace ItServiceApp.Controllers
                 return View(model);
             }
         }
-        public async Task<IActionResult> ConfirmEmail(string userId,string code)
+        public async Task<IActionResult> ConfirmEmail(string userId, string code)
         {
-            if (userId == null|| code == null)
+            if (userId == null || code == null)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -124,7 +125,7 @@ namespace ItServiceApp.Controllers
             code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
             var result = await _userManager.ConfirmEmailAsync(user, code);
             ViewBag.StatusMessage = result.Succeeded ? "Thank you for confirm your email." : "Eror confirm your email.";
-            if (result.Succeeded && _userManager.IsInRoleAsync(user,RoleModels.Passive).Result)
+            if (result.Succeeded && _userManager.IsInRoleAsync(user, RoleModels.Passive).Result)
             {
                 await _userManager.RemoveFromRoleAsync(user, RoleModels.Passive);
                 await _userManager.AddToRoleAsync(user, RoleModels.User);
@@ -175,6 +176,89 @@ namespace ItServiceApp.Controllers
             await _signInManager.SignOutAsync();
             return RedirectToAction("Index", "Home");
         }
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Profile()
+        {
+            var user = await _userManager.FindByIdAsync(HttpContext.GetUserId());
 
+            var model = new UserProfileViewModel()
+            {
+                Email = user.Email,
+                Name = user.Name,
+                Surname = user.Surname
+            };
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> Profile(UserProfileViewModel model)
+
+        {
+            var user = await _userManager.FindByIdAsync(HttpContext.GetUserId());
+
+            user.Name = model.Name;
+            user.Surname = model.Surname;
+            if (user.Email != model.Email)
+            {
+                await _userManager.RemoveFromRoleAsync(user, RoleModels.User);
+                await _userManager.AddToRoleAsync(user, RoleModels.Passive);
+                user.Email = model.Email;
+
+                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code },
+                    protocol: Request.Scheme);
+
+                var emailMessage = new EmailMessage()
+                {
+                    Contacts = new string[] { user.Email },
+                    Body =
+                     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.",
+                    Subject = "Confirm your email"
+                };
+
+                await _emailSender.SendAsync(emailMessage);
+
+            }
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, ModelState.ToFullErrorString());
+            }
+
+            return View(model);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult UpdatePassword()
+        {
+            return View();
+        }
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> UpdatePassword(PasswordChangeViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+            var user = await _userManager.FindByIdAsync(HttpContext.GetUserId());
+            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                ViewBag.Message = "Parola güncelleme işlemi başarılı";
+            }
+            else
+            {
+                ViewBag.Message = $"Bir hata oluştu: {ModelState.ToFullErrorString()}";
+            }
+
+            return RedirectToAction("Profile");
+        }
     }
 }
